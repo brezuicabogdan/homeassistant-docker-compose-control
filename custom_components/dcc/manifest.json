@@ -1,0 +1,9 @@
+{
+  "domain": "dcc",
+  "name": "Docker Compose Control",
+  "version": "0.1.0",
+  "requirements": ["aiofiles", "docker", "pyyaml"],
+  "dependencies": [],
+  "codeowners": ["@brezuicabogdan"],
+  "config_flow": true
+}

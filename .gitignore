@@ -1,0 +1,55 @@
+# Home Assistant Custom Component - .gitignore
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore Home Assistant logs and database
+home-assistant.log
+home-assistant_v2.db
+
+# Ignore virtual environment
+venv/
+.ha-venv/
+
+# Ignore HACS-related files
+custom_components/.translations/
+custom_components/.translations/*.json
+custom_components/.translations/*.yaml
+custom_components/*/__pycache__/
+custom_components/*/*.pyc
+custom_components/*/*.pyo
+
+# Ignore personal and environment configuration files
+.env
+secrets.yaml
+*.local
+*.log
+
+# Ignore IDE/editor specific files
+.vscode/
+.idea/
+*.iml
+
+# Ignore build and distribution files
+dist/
+build/
+*.egg-info/
+
+# Ignore Docker files (if applicable)
+docker-compose.override.yml
+
+# Ignore test coverage reports
+.coverage
+htmlcov/
+*.cover
+coverage.xml
+
+# Ignore dependency files
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Ignore generated translations
+translations/*.json
+

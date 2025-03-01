@@ -1,0 +1,11 @@
+restart_service:
+  description: "Restart a Docker service"
+  fields:
+    entry_id:
+      description: "The configuration entry ID"
+      required: true
+      example: "123abc"
+    service_name:
+      description: "The name of the service to restart"
+      required: true
+      example: "homeassistant"
