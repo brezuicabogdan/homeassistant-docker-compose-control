@@ -1,14 +1,14 @@
 {
   "domain": "dcc",
   "name": "Docker Compose Control",
-  "version": "0.1.0",
-  "requirements": ["aiofiles", "docker", "pyyaml"],
-  "dependencies": [],
   "codeowners": ["@brezuicabogdan"],
   "config_flow": true,
-  "integration_type": "device",
-  "single_config_entry": false,
-  "iot_class": "local_polling",
+  "dependencies": [],
   "documentation": "https://github.com/brezuicabogdan/homeassistant-docker-compose-control",
-  "issue_tracker": "https://github.com/brezuicabogdan/homeassistant-docker-compose-control/issues"
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/brezuicabogdan/homeassistant-docker-compose-control/issues",
+  "requirements": ["aiofiles", "docker", "pyyaml"],
+  "single_config_entry": false,
+  "version": "0.1.0"
 }

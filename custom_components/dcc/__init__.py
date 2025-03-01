@@ -11,6 +11,7 @@ import yaml
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+import homeassistant.helpers.config_validation as cv
 import homeassistant.helpers.device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -19,6 +20,8 @@ from .validators import validate_compose_file, validate_docker_socket
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "dcc"
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):

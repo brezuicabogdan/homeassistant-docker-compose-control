@@ -1,11 +1,9 @@
 restart_service:
-  description: "Restart a Docker service"
+  name: Restart Service
+  description: "Restart a Docker Compose service"
   fields:
     entry_id:
+      name: Service Entity ID
       description: "The configuration entry ID"
       required: true
       example: "123abc"
-    service_name:
-      description: "The name of the service to restart"
-      required: true
-      example: "homeassistant"
