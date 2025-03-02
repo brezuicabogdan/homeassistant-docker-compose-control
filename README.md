@@ -109,7 +109,7 @@ Each Docker service entity provides:
 - Restart a service via Home Assistant **Developer Tools → Services**:
   ```json
   {
-    "entity_id": "sensor.docker_service_homeassistant"
+    "entity_id": "sensor.docker_homeassistant"
   }
   ```
 
@@ -129,7 +129,7 @@ This project aims to provide full integration of Docker Compose into Home Assist
 - Track container states (`running`, `stopped`, `exited`, etc.).
 - Monitor container health (`healthy`, `unhealthy`, `starting`).
 
-3️⃣ **Restart Services from Home Assistant** 🛠️ (In Progress)
+3️⃣ **Restart Services from Home Assistant** ✅ (Done)
 
 - Restart services directly from the HA UI or via automation.
 

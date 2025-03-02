@@ -1,7 +1,6 @@
 """Homeassistant Docker Compose Component."""
 
 from datetime import timedelta
-import json
 import logging
 
 import aiofiles
@@ -15,11 +14,11 @@ import homeassistant.helpers.config_validation as cv
 import homeassistant.helpers.device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from .const import DOMAIN
+from .services import async_setup_services
 from .validators import validate_compose_file, validate_docker_socket
 
 _LOGGER = logging.getLogger(__name__)
-
-DOMAIN = "dcc"
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -27,6 +26,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the Docker Compose Component."""
     hass.data.setdefault(DOMAIN, {})
+    await async_setup_services(hass)
     return True
 
 
@@ -34,10 +34,6 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     """Component setup for the integration."""
     docker_socket = entry.data.get("docker_socket")
     compose_file = entry.data.get("compose_file")
-
-    hass.config_entries.async_update_entry(
-        entry, title=f"{compose_file} on {docker_socket}"
-    )
 
     # Validate Docker socket
     try:
@@ -52,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
 
     try:
         client = await hass.async_add_executor_job(get_docker_client)
-        hass.data["ha_dcc"] = {"client": client}
+        hass.data[DOMAIN] = {"client": client}
     except docker.errors.DockerException as e:
         _LOGGER.error("Failed to connect to Docker: %s", e)
         return False
@@ -75,6 +71,10 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     async with aiofiles.open(compose_file) as file:
         content = await file.read()
         compose_data = yaml.safe_load(content)
+
+    hass.config_entries.async_update_entry(
+        entry, title=f"{compose_file} on {docker_socket}"
+    )
 
     services = {
         service_data.get("container_name", service_name): service_name
@@ -100,17 +100,19 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     )
     hass.config_entries.async_update_entry(entry, title=device.name)
 
-    # Create an update coordinator to manage updates
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
         name=f"DCC {entry.entry_id}",
-        update_method=lambda: update_docker_status(hass, client, services),
-        update_interval=timedelta(seconds=30),  # Adjust update frequency as needed
+        update_method=lambda: update_docker_status(
+            hass, client, services, entry.entry_id
+        ),
+        update_interval=timedelta(seconds=30),  # Adjust update frequency
     )
 
-    # Store coordinator
+    # Store coordinator for sensor access
     hass.data[DOMAIN][entry.entry_id]["coordinator"] = coordinator
+    await coordinator.async_config_entry_first_refresh()
 
     # Forward entry setup to the sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
@@ -118,49 +120,26 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     return True
 
 
-async def update_docker_status(hass: HomeAssistant, client, services):
-    """Fetch updated Docker container status."""
-    status = {}
+async def update_docker_status(hass: HomeAssistant, client, services, entry_id):
+    """Fetch updated Docker container status and store in hass.data."""
 
-    def get_container_status(service_name):
-        """Fetch container status by service name, ignoring container_name overrides."""
+    def get_all_containers_status():
+        """Fetch status for all containers from Docker."""
+        containers_status = {}
+
         try:
-            # Get all containers (running and stopped)
             containers = client.containers.list(all=True)
 
-            # Try matching by `com.docker.compose.service`
-            for container in containers:
-                labels = container.labels  # Get container labels safely
-                if labels.get("com.docker.compose.service") == service_name:
-                    _LOGGER.debug(
-                        "Found container by label: %s",
-                        json.dumps(container.attrs, indent=4),
-                    )
-                    container_info = container.attrs
-                    return {
-                        "status": container.status,  # Running, Exited, etc.
-                        "health": container_info.get("State", {})
-                        .get("Health", {})
-                        .get("Status", "unknown"),
-                        "restart_count": container_info.get("RestartCount", 0),
-                        "image": container_info.get("Config", {}).get(
-                            "Image", "unknown"
-                        ),
-                        "uptime": container_info.get("State", {}).get(
-                            "StartedAt", "unknown"
-                        ),
-                    }
+            for service_name in services:
+                container_info = next(
+                    (c.attrs for c in containers if c.name == service_name), None
+                )
 
-            # Fallback: Check by container name
-            for container in containers:
-                if container.name == service_name:  # Direct name check
-                    _LOGGER.debug(
-                        "Found container by name: %s",
-                        json.dumps(container.attrs, indent=4),
-                    )
-                    container_info = container.attrs
-                    return {
-                        "status": container.status,  # Running, Exited, etc.
+                if container_info:
+                    containers_status[service_name] = {
+                        "status": container_info.get("State", {}).get(
+                            "Status", "unknown"
+                        ),
                         "health": container_info.get("State", {})
                         .get("Health", {})
                         .get("Status", "unknown"),
@@ -172,20 +151,26 @@ async def update_docker_status(hass: HomeAssistant, client, services):
                             "StartedAt", "unknown"
                         ),
                     }
+                else:
+                    containers_status[service_name] = {"status": "not_found"}
 
         except Exception as e:  # noqa: BLE001
-            _LOGGER.error("Error fetching container status for %s: %s", service_name, e)
-            return "unknown"
-        else:
-            return "not_found"  # If not found by either method
+            _LOGGER.error("Error fetching container status: %s", e)
 
-    # Run each container lookup in a separate thread
-    for service in services:
-        status[service] = await hass.async_add_executor_job(
-            get_container_status, service
-        )
+        return containers_status
 
-    return status
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+
+    if entry_id not in hass.data[DOMAIN]:
+        hass.data[DOMAIN][entry_id] = {}
+
+    # Store updated status in hass.data for sensors to access
+    hass.data[DOMAIN][entry_id]["status"] = await hass.async_add_executor_job(
+        get_all_containers_status
+    )
+
+    return hass.data[DOMAIN][entry_id]["status"]
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
