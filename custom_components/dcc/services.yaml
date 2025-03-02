@@ -1,9 +1,9 @@
-restart_service:
-  name: Restart Service
-  description: "Restart a Docker Compose service"
+restart_container:
+  name: DCC Restart Container
+  description: "Restart a Docker Compose container"
   fields:
-    entry_id:
-      name: Service Entity ID
-      description: "The configuration entry ID"
+    entity_id:
+      name: Entity ID
+      description: "The entity ID of the container sensor"
       required: true
-      example: "123abc"
+      example: "sensor.homeassistant"

@@ -3,9 +3,10 @@
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 
-from . import DOMAIN
+from .const import DOMAIN
 from .validators import validate_compose_file, validate_docker_socket
 
 
@@ -19,6 +20,12 @@ class HaDccConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             docker_socket = user_input["docker_socket"]
             compose_file = user_input["compose_file"]
+
+            existing_entry = self._check_existing_entry(docker_socket, compose_file)
+            if existing_entry:
+                return self.async_abort(
+                    reason="The same docker socket and docker-compose file are already configured"
+                )
 
             try:
                 await validate_docker_socket(docker_socket)
@@ -49,3 +56,14 @@ class HaDccConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
         )
+
+    @callback
+    def _check_existing_entry(self, docker_socket, compose_file):
+        """Check if a config entry with the same Docker socket + Compose file exists."""
+        for entry in self._async_current_entries():
+            if (
+                entry.data["docker_socket"] == docker_socket
+                and entry.data["compose_file"] == compose_file
+            ):
+                return entry
+        return None

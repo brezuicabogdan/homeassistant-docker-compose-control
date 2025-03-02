@@ -1,0 +1,3 @@
+"""Component constans."""
+
+DOMAIN = "dcc"
