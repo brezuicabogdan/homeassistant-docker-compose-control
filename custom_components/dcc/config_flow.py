@@ -6,7 +6,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 
-from .const import DOMAIN
+from .const import DEFAULT_CONTAINER_IMAGE_UPDATE_INTERVAL, DOMAIN
 from .validators import validate_compose_file, validate_docker_socket
 
 
@@ -20,6 +20,18 @@ class HaDccConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             docker_socket = user_input["docker_socket"]
             compose_file = user_input["compose_file"]
+            container_image_update_check_interval = user_input.get(
+                "container_image_update_check_interval",
+                DEFAULT_CONTAINER_IMAGE_UPDATE_INTERVAL,
+            )
+
+            if (
+                not isinstance(container_image_update_check_interval, int)
+                or container_image_update_check_interval <= 0
+            ):
+                errors["container_image_update_check_interval"] = (
+                    "The container image update check interval must be a positive number."
+                )
 
             existing_entry = self._check_existing_entry(docker_socket, compose_file)
             if existing_entry:
@@ -39,7 +51,12 @@ class HaDccConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if not errors:
                 return self.async_create_entry(
-                    title="HA Docker Compose Control", data=user_input
+                    title="HA Docker Compose Control",
+                    data={
+                        "docker_socket": docker_socket,
+                        "compose_file": compose_file,
+                        "container_image_update_check_interval": container_image_update_check_interval,
+                    },
                 )
 
         return self.async_show_form(
@@ -52,6 +69,10 @@ class HaDccConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         "compose_file", default="/containers/docker-compose.yaml"
                     ): cv.string,
+                    vol.Optional(
+                        "container_image_update_check_interval",
+                        default=DEFAULT_CONTAINER_IMAGE_UPDATE_INTERVAL,
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1)),
                 }
             ),
             errors=errors,

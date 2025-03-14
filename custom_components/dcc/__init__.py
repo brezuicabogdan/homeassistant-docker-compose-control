@@ -14,7 +14,7 @@ import homeassistant.helpers.config_validation as cv
 import homeassistant.helpers.device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN
+from .const import DEFAULT_CONTAINER_IMAGE_UPDATE_INTERVAL, DOMAIN
 from .services import async_setup_services
 from .validators import validate_compose_file, validate_docker_socket
 
@@ -34,6 +34,9 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     """Component setup for the integration."""
     docker_socket = entry.data.get("docker_socket")
     compose_file = entry.data.get("compose_file")
+    container_image_update_check_interval = entry.data.get(
+        "container_image_update_check_interval", DEFAULT_CONTAINER_IMAGE_UPDATE_INTERVAL
+    )
 
     # Validate Docker socket
     try:
@@ -87,6 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
         "docker_socket": docker_socket,
         "compose_file": compose_file,
         "services": services,
+        "container_image_update_check_interval": container_image_update_check_interval,
     }
 
     # Register the device
@@ -107,7 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
         update_method=lambda: update_docker_status(
             hass, client, services, entry.entry_id
         ),
-        update_interval=timedelta(seconds=30),  # Adjust update frequency
+        update_interval=timedelta(seconds=30),
     )
 
     # Store coordinator for sensor access
@@ -115,7 +119,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     await coordinator.async_config_entry_first_refresh()
 
     # Forward entry setup to the sensor platform
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "update"])
 
     return True
 
@@ -176,5 +180,6 @@ async def update_docker_status(hass: HomeAssistant, client, services, entry_id):
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
     await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    await hass.config_entries.async_forward_entry_unload(entry, "update")
     hass.data[DOMAIN].pop(entry.entry_id)
     return True

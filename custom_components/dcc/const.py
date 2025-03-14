@@ -1,3 +1,4 @@
 """Component constans."""
 
 DOMAIN = "dcc"
+DEFAULT_CONTAINER_IMAGE_UPDATE_INTERVAL = 24

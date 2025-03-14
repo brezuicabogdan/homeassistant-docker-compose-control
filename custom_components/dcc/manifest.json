@@ -9,6 +9,10 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/brezuicabogdan/homeassistant-docker-compose-control/issues",
   "requirements": ["aiofiles", "docker", "pyyaml"],
+  "supported_platforms": ["sensor", "update"],
+  "options": {
+    "updates_check_interval": 24
+  },
   "single_config_entry": false,
-  "version": "0.2.0"
+  "version": "0.3.0"
 }
